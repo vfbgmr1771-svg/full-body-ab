@@ -1471,3 +1471,41 @@ select.full {
     opacity: 0.7;
   }
 }
+
+/* ---------- narrow phones ----------
+   At 360px the number field between − and + was 41px wide, too small for "102.5".
+   Trim the card insets (the 44px buttons stay), and stack weight over reps below 340px. */
+@media (max-width: 380px) {
+  .ex {
+    padding: 12px;
+  }
+  .set {
+    padding: 8px 10px 10px;
+  }
+  .set-inputs {
+    gap: 8px;
+  }
+  .stepper {
+    grid-template-columns: 44px 1fr 44px;
+  }
+  .stepper .num {
+    font-size: 1.125rem;
+  }
+}
+
+@media (max-width: 340px) {
+  .set-inputs {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* settings: keep the checkbox aligned with its label when the name wraps */
+.srow label.grow {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.tgl {
+  flex: none;
+}

@@ -131,7 +131,9 @@ export function SettingsScreen({ settings, onSettings }: Props) {
                 checked={e.enabled}
                 onChange={(ev) => patchEx(e.id, { enabled: (ev.currentTarget as HTMLInputElement).checked })}
               />
-              <span> {e.name} · {e.variants[0]}</span>
+              <span>
+                {e.name} · {e.variants[0]}
+              </span>
             </label>
             <select
               aria-label={`วันของ ${e.name}`}

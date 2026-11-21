@@ -187,7 +187,8 @@ export function Today({ settings, onStart, onGoSettings }: Props) {
             <div class="small">
               {rec.weight == null ? 'ใส่น้ำหนักเอง' : `เป้า ${fmtWeight(rec.weight)}`}
             </div>
-            <div class="small mstat">{STATUS_TEXT[rec.status]}</div>
+            {/* a new exercise already says "ใส่น้ำหนักเอง" above; don't repeat it */}
+            {rec.status !== 'new' && <div class="small mstat">{STATUS_TEXT[rec.status]}</div>}
           </div>
         ))}
       </div>
