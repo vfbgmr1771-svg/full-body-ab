@@ -8,6 +8,8 @@ export default defineConfig({
     preact(),
     VitePWA({
       registerType: 'autoUpdate',
+      // registered from main.tsx, and only on the web: the Android app ships its files locally
+      injectRegister: null,
       includeAssets: ['icon.svg'],
       workbox: {
         globPatterns: ['**/*.{js,css,html,svg,png,woff2}'],

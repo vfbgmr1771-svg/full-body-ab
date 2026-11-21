@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'preact/hooks';
 import type { Settings } from './db';
+import { scheduleRestEnd, usesSystemAlerts } from './native';
 
 export interface RestState {
   start: number; // ms epoch
@@ -78,6 +79,8 @@ export function useRest(settings: Settings | null): RestApi {
     } catch {
       /* ignore */
     }
+    // Android app: hand the end time to the system so the alert fires with the screen off
+    void scheduleRestEnd(state ? state.start + state.total * 1000 : null);
     if (!state) return;
     const id = setInterval(() => setNow(Date.now()), 250);
     return () => clearInterval(id);
@@ -90,7 +93,8 @@ export function useRest(settings: Settings | null): RestApi {
     if (now >= end && fired.current !== key) {
       fired.current = key;
       // only alert if it just ended, not when reopening the app much later
-      if (Date.now() - end < 4000) beep();
+      // in the Android app the system notification already sounds and vibrates
+      if (Date.now() - end < 4000 && !usesSystemAlerts()) beep();
     }
   }, [now, state]);
 
