@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from 'preact/hooks';
 import { db, todayStr, type ProteinLog, type Settings } from '../db';
-import { NumInput } from '../ui';
+import { NumInput, Ring } from '../ui';
 
 interface Props {
   settings: Settings;
@@ -50,7 +50,9 @@ export function Protein({ settings, onSettings }: Props) {
       <header class="topbar">
         <div>
           <h1>โปรตีน</h1>
-          <p class="muted">เป้าหมาย = น้ำหนักตัว × {settings.proteinFactor}</p>
+          <p class="muted">
+            {bw ? `${bw} กก. × ${settings.proteinFactor}` : `น้ำหนักตัว × ${settings.proteinFactor}`}
+          </p>
         </div>
       </header>
 
@@ -69,69 +71,79 @@ export function Protein({ settings, onSettings }: Props) {
         </section>
       )}
 
-      <section class="card">
-        <div class="big">
-          <b>{got}</b>
-          <span class="muted"> / {target ?? '—'} กรัม</span>
-        </div>
-        <div class="bar" role="progressbar" aria-valuenow={pct} aria-valuemin={0} aria-valuemax={100}>
-          <div style={{ width: `${pct}%` }} />
-        </div>
-        <p class="muted">
+      <section class="hero orange center">
+        <Ring
+          pct={target ? got / target : 0}
+          size={168}
+          stroke={12}
+          color="#111318"
+          track="rgba(255,255,255,0.6)"
+          label={`โปรตีน ${got} จาก ${target ?? '—'} กรัม`}
+        >
+          <span class="ring-big" key={got}>
+            {got}
+          </span>
+          <span class="ring-small">จาก {target ?? '—'} กรัม</span>
+        </Ring>
+        <p class="hero-sub">
           {target
             ? got >= target
               ? 'ถึงเป้าแล้ว'
               : `เหลืออีก ${target - got} กรัม (${pct}%)`
             : 'ใส่น้ำหนักตัวเพื่อดูเป้าหมาย'}
         </p>
-        <div class="quick">
+        <div class="roundrow">
           {QUICK.map((g) => (
-            <button type="button" key={g} class="btn tonal" onClick={() => add(g)}>
+            <button type="button" key={g} class="round big" aria-label={`เพิ่ม ${g} กรัม`} onClick={() => add(g)}>
               +{g}
             </button>
           ))}
         </div>
-        <div class="inline">
-          <input
-            class="num"
-            type="text"
-            inputMode="decimal"
-            placeholder="ใส่เอง (กรัม)"
-            aria-label="จำนวนโปรตีนที่ใส่เอง"
-            value={custom}
-            onInput={(e) => setCustom((e.currentTarget as HTMLInputElement).value)}
-            onKeyDown={(e) => e.key === 'Enter' && addCustom()}
-          />
-          <button type="button" class="btn tonal" onClick={addCustom}>
-            เพิ่ม
-          </button>
-        </div>
-        <div class="inline">
-          <button type="button" class="btn ghost" onClick={() => add(-10)}>
-            −10
-          </button>
-          <button
-            type="button"
-            class="link danger"
-            onClick={() => got > 0 && confirm('รีเซ็ตยอดวันนี้เป็น 0 ใช่ไหม') && add(-got)}
-          >
-            รีเซ็ตวันนี้
-          </button>
-        </div>
       </section>
+
+      <div class="pillinput">
+        <input
+          class="num"
+          type="text"
+          inputMode="decimal"
+          placeholder="ใส่จำนวนกรัมเอง…"
+          aria-label="จำนวนโปรตีนที่ใส่เอง"
+          value={custom}
+          onInput={(e) => setCustom((e.currentTarget as HTMLInputElement).value)}
+          onKeyDown={(e) => e.key === 'Enter' && addCustom()}
+        />
+        <button type="button" class="btn primary" onClick={addCustom}>
+          เพิ่ม
+        </button>
+      </div>
+      <div class="inline spread">
+        <button type="button" class="link" onClick={() => add(-10)}>
+          ลบ 10 กรัม
+        </button>
+        <button
+          type="button"
+          class="link danger"
+          onClick={() => got > 0 && confirm('รีเซ็ตยอดวันนี้เป็น 0 ใช่ไหม') && add(-got)}
+        >
+          รีเซ็ตวันนี้
+        </button>
+      </div>
 
       {logs.length > 0 && (
         <section class="card">
           <h2>7 วันล่าสุด</h2>
-          {logs.map((l) => (
-            <div class="li" key={l.date}>
-              <span>{dateText(l.date)}</span>
-              <span>
-                {l.grams} ก.
-                {target ? <span class="muted"> · {Math.round((l.grams / target) * 100)}%</span> : null}
-              </span>
-            </div>
-          ))}
+          {logs.map((l) => {
+            const p = target ? Math.min(100, Math.round((l.grams / target) * 100)) : 0;
+            return (
+              <div class="barrow" key={l.date}>
+                <span class="small">{dateText(l.date)}</span>
+                <div class="bar">
+                  <div class={p >= 100 ? 'full' : ''} style={{ width: `${p}%` }} />
+                </div>
+                <span class="small">{target ? `${p}%` : `${l.grams} ก.`}</span>
+              </div>
+            );
+          })}
         </section>
       )}
     </div>

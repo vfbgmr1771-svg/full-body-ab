@@ -92,3 +92,10 @@ History and progression are tracked per `(exerciseId, variant)` based on the mos
 2. Repo Settings → Pages → Source: **GitHub Actions**.
 3. `.github/workflows/deploy.yml` runs `npm ci && npm run build` and publishes `dist/` on every push to `main`.
 4. On Android open the Pages URL in Chrome → menu → "Install app". `base: './'` makes it work under the `/<repo>/` sub-path.
+
+## Visual system (typography, colour, motion)
+- **Type:** Noto Sans Thai 400/600/700, self-hosted (`@fontsource`, Latin + Thai subsets, precached for offline). All sizes in rem via role tokens: 12 / 13 / 16 / 18 (card titles) / 20 (section heads) / 26 (screen titles). Thai leading 1.5 body, 1.3–1.35 headings. Digits are tabular by default in this face.
+- **Colour:** lavender = increase weight, periwinkle = keep, orange = decrease, mint = done, grey = new. Status is also carried by an icon (arrow up / dot / arrow down), never colour alone. Secondary text on a coloured surface uses that surface's own ink (`--ink-2`), not grey or opacity. All text pairs ≥ 4.5:1, controls ≥ 3:1 (checked with a script).
+- **Browser surfaces themed:** selection, caret, placeholder, focus ring, `color-scheme: light`.
+- **Motion (Operate, one focal moment):** checking a set releases the button from its pressed scale, washes the row mint and starts the rest ring. Screens rise in (380 ms, stagger capped at 150 ms). Rings ease to new values. Controls scale to .96 on press. `prefers-reduced-motion` removes all translate/scale/sweep and keeps colour changes plus a dim on press.
+- Not done: a dark theme (the app is light only).

@@ -1,5 +1,58 @@
+import type { ComponentChildren } from 'preact';
 import { useEffect, useRef } from 'preact/hooks';
-import { fmtWeight, type Recommendation } from './logic';
+import { fmtWeight, type RecStatus, type Recommendation } from './logic';
+import { IconArrowDown, IconArrowUp, IconDot } from './icons';
+
+export const STATUS_TEXT: Record<RecStatus, string> = {
+  up: 'เพิ่มน้ำหนัก',
+  same: 'เพิ่มจำนวนครั้ง',
+  down: 'ลดน้ำหนัก',
+  new: 'ใส่น้ำหนักเอง',
+};
+
+export function StatusIcon({ status, size = 16 }: { status: RecStatus; size?: number }) {
+  if (status === 'up') return <IconArrowUp size={size} />;
+  if (status === 'down') return <IconArrowDown size={size} />;
+  return <IconDot size={size} />;
+}
+
+/** Sets the stagger index used by CSS (`animation-delay: calc(var(--i) * …)`). */
+export const stagger = (i: number) => ({ '--i': i }) as unknown as preact.JSX.CSSProperties;
+
+/** Circular progress. pct is 0..1; children are drawn in the middle. */
+export function Ring(props: {
+  pct: number;
+  size: number;
+  stroke: number;
+  color: string;
+  track: string;
+  label?: string;
+  children?: ComponentChildren;
+}) {
+  const { size, stroke } = props;
+  const r = (size - stroke) / 2;
+  const c = 2 * Math.PI * r;
+  const p = Math.min(1, Math.max(0, props.pct));
+  return (
+    <div class="ring" style={{ width: size, height: size }} role="img" aria-label={props.label}>
+      <svg width={size} height={size} viewBox={`0 0 ${size} ${size}`}>
+        <circle cx={size / 2} cy={size / 2} r={r} fill="none" stroke={props.track} stroke-width={stroke} />
+        <circle
+          cx={size / 2}
+          cy={size / 2}
+          r={r}
+          fill="none"
+          stroke={props.color}
+          stroke-width={stroke}
+          stroke-linecap="round"
+          style={{ strokeDasharray: c, strokeDashoffset: c * (1 - p) }}
+          transform={`rotate(-90 ${size / 2} ${size / 2})`}
+        />
+      </svg>
+      <div class="ring-in">{props.children}</div>
+    </div>
+  );
+}
 
 export function Badge({ rec, long }: { rec: Recommendation; long?: boolean }) {
   const w = rec.weight;

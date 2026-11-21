@@ -11,13 +11,6 @@ export default defineConfig({
       includeAssets: ['icon.svg'],
       workbox: {
         globPatterns: ['**/*.{js,css,html,svg,png,woff2}'],
-        runtimeCaching: [
-          {
-            urlPattern: /^https:\/\/fonts\.(googleapis|gstatic)\.com\/.*/i,
-            handler: 'StaleWhileRevalidate',
-            options: { cacheName: 'google-fonts' },
-          },
-        ],
       },
       manifest: {
         name: 'Full Body A/B',

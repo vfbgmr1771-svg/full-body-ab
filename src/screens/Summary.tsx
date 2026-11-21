@@ -1,7 +1,8 @@
 import { useEffect, useState } from 'preact/hooks';
 import { db, type DayType, type Exercise, type Session } from '../db';
 import { fmtWeight, nextDayType, recommend, variantFor, type Recommendation } from '../logic';
-import { Badge } from '../ui';
+import { STATUS_TEXT, StatusIcon, stagger } from '../ui';
+import { IconTrophy } from '../icons';
 
 interface Row {
   ex: Exercise;
@@ -50,41 +51,44 @@ export function Summary({ sessionId, onHome }: { sessionId: number; onHome: () =
     Math.round(((session.finishedAt ?? Date.now()) - session.startedAt) / 60000),
   );
   const totalSets = rows.reduce((n, r) => n + r.sets, 0);
+  const name = (r: Row) => (r.ex.variants.length > 1 ? r.variant : r.ex.variants[0]);
 
   return (
     <div class="page">
-      <header class="topbar center">
-        <div>
-          <div class="trophy" aria-hidden="true">
-            🏆
-          </div>
-          <h1>จบ Day {session.dayType} แล้ว</h1>
-          <p class="muted">
-            {rows.length} ท่า · {totalSets} เซ็ต · {mins} นาที
-          </p>
+      <section class="hero peri center">
+        <div class="circ white big">
+          <IconTrophy size={28} />
         </div>
-      </header>
+        <h1>จบ Day {session.dayType} แล้ว</h1>
+        <p class="hero-sub">
+          {rows.length} ท่า · {totalSets} เซ็ต · {mins} นาที
+        </p>
+      </section>
 
+      <h2 class="sec">ที่ทำวันนี้</h2>
       <section class="card">
-        <h2>ที่ทำวันนี้</h2>
         {rows.map((r) => (
           <div class="li col" key={r.ex.id}>
-            <div>{r.ex.variants.length > 1 ? r.variant : r.ex.variants[0]}</div>
+            <div class="b">{name(r)}</div>
             <div class="muted small">{r.best}</div>
           </div>
         ))}
       </section>
 
-      <section class="card">
-        <h2>ครั้งหน้า</h2>
-        {rows.map((r) => (
-          <div class="li" key={r.ex.id}>
-            <span>{r.ex.variants.length > 1 ? r.variant : r.ex.variants[0]}</span>
-            <Badge rec={r.rec} />
+      <h2 class="sec">ครั้งหน้า</h2>
+      {rows.map((r, i) => (
+        <div class={`nextrow st-${r.rec.status}`} key={r.ex.id} style={stagger(Math.min(i, 6))}>
+          <div class="circ white sm">
+            <StatusIcon status={r.rec.status} />
           </div>
-        ))}
-        <p class="muted center">ฝึกครั้งถัดไป: Day {next}</p>
-      </section>
+          <div class="grow">
+            <div class="b">{name(r)}</div>
+            <div class="small">{STATUS_TEXT[r.rec.status]}</div>
+          </div>
+          <b>{r.rec.weight == null ? '—' : fmtWeight(r.rec.weight)}</b>
+        </div>
+      ))}
+      <p class="muted center nextnote">ฝึกครั้งถัดไป: Day {next}</p>
 
       <button type="button" class="btn primary" onClick={onHome}>
         กลับหน้าแรก

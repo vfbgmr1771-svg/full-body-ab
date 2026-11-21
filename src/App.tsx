@@ -1,22 +1,22 @@
 import { useEffect, useState } from 'preact/hooks';
 import { db, getSettings, type Settings } from './db';
 import { useRest } from './rest';
-import { RestBar } from './RestTimer';
 import { Today } from './screens/Today';
 import { Workout } from './screens/Workout';
 import { Summary } from './screens/Summary';
 import { History } from './screens/History';
 import { Protein } from './screens/Protein';
 import { SettingsScreen } from './screens/Settings';
+import { IconBarbell, IconCalendar, IconEgg, IconSliders } from './icons';
 
 type TabName = 'today' | 'history' | 'protein' | 'settings';
 type View = { name: TabName } | { name: 'workout'; id: number } | { name: 'summary'; id: number };
 
-const TABS: { name: TabName; icon: string; label: string }[] = [
-  { name: 'today', icon: '🏋️', label: 'วันนี้' },
-  { name: 'history', icon: '📅', label: 'ประวัติ' },
-  { name: 'protein', icon: '🍗', label: 'โปรตีน' },
-  { name: 'settings', icon: '⚙️', label: 'ตั้งค่า' },
+const TABS: { name: TabName; icon: preact.JSX.Element; label: string }[] = [
+  { name: 'today', icon: <IconBarbell size={24} />, label: 'วันนี้' },
+  { name: 'history', icon: <IconCalendar size={24} />, label: 'ประวัติ' },
+  { name: 'protein', icon: <IconEgg size={24} />, label: 'โปรตีน' },
+  { name: 'settings', icon: <IconSliders size={24} />, label: 'ตั้งค่า' },
 ];
 
 export function App() {
@@ -68,8 +68,6 @@ export function App() {
       {view.name === 'protein' && <Protein settings={settings} onSettings={updateSettings} />}
       {view.name === 'settings' && <SettingsScreen settings={settings} onSettings={updateSettings} />}
 
-      {view.name === 'workout' && <RestBar rest={rest} />}
-
       {tab && (
         <nav class="tabbar" aria-label="เมนูหลัก">
           {TABS.map((t) => (
@@ -78,11 +76,9 @@ export function App() {
               key={t.name}
               class={view.name === t.name ? 'on' : ''}
               aria-current={view.name === t.name ? 'page' : undefined}
-              onClick={() => setView({ name: t.name })}
+              onClick={() => setView({ name: t.name } as View)}
             >
-              <span class="ico" aria-hidden="true">
-                {t.icon}
-              </span>
+              <span class="ico">{t.icon}</span>
               {t.label}
             </button>
           ))}

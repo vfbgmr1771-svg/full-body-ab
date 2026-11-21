@@ -14,7 +14,9 @@ import {
 } from '../logic';
 import { reasonText } from '../advice';
 import { Badge, Stepper } from '../ui';
+import { IconCheck } from '../icons';
 import { unlockAudio, type RestApi } from '../rest';
+import { RestMini, RestPanel } from '../RestTimer';
 
 interface Props {
   sessionId: number;
@@ -26,6 +28,7 @@ interface Props {
 }
 
 const r2 = (n: number) => Math.round(n * 100) / 100;
+const exLabel = (ex: Exercise, variant: string) => (ex.variants.length > 1 ? ex.name : variant);
 
 export function Workout({ sessionId, settings, rest, onToggleAuto, onFinish, onCancel }: Props) {
   const [session, setSession] = useState<Session | null>(null);
@@ -34,6 +37,7 @@ export function Workout({ sessionId, settings, rest, onToggleAuto, onFinish, onC
   const [recs, setRecs] = useState<Record<string, Recommendation>>({});
   const [flash, setFlash] = useState<string | null>(null);
   const [adding, setAdding] = useState(false);
+  const [panelVisible, setPanelVisible] = useState(true);
   const [, setTick] = useState(0);
 
   const load = useCallback(async () => {
@@ -188,11 +192,22 @@ export function Workout({ sessionId, settings, rest, onToggleAuto, onFinish, onC
     onCancel();
   };
 
-  const activeId = list.find((ex) => logs.some((l) => l.exerciseId === ex.id && !l.completed))?.id;
+  const isDone = (ex: Exercise) => {
+    const mine = logs.filter((l) => l.exerciseId === ex.id);
+    return mine.length > 0 && mine.every((l) => l.completed);
+  };
+  const activeId = list.find((ex) => !isDone(ex))?.id;
   const minutes = Math.max(0, Math.round((Date.now() - session.startedAt) / 60000));
   const candidates = all
     .filter((e) => e.isAccessory && !list.some((x) => x.id === e.id))
     .sort((a, b) => a.order - b.order);
+
+  const jump = (id: string) => {
+    const calm = matchMedia('(prefers-reduced-motion: reduce)').matches;
+    document
+      .getElementById(`ex-${id}`)
+      ?.scrollIntoView({ behavior: calm ? 'auto' : 'smooth', block: 'start' });
+  };
 
   return (
     <div class="page workout">
@@ -213,19 +228,39 @@ export function Workout({ sessionId, settings, rest, onToggleAuto, onFinish, onC
         </label>
       </header>
 
+      <RestPanel rest={rest} settings={settings} onVisible={setPanelVisible} />
+
+      <nav class="hscroll chips-nav" aria-label="ไปยังท่า">
+        {list.map((ex) => {
+          const variant = variantFor(session, ex, logs);
+          return (
+            <button
+              type="button"
+              key={ex.id}
+              class={`chip${ex.id === activeId ? ' on' : ''}${isDone(ex) ? ' done' : ''}`}
+              onClick={() => jump(ex.id)}
+            >
+              {isDone(ex) ? '✓ ' : ''}
+              {exLabel(ex, variant)}
+            </button>
+          );
+        })}
+      </nav>
+
       {list.map((ex) => {
         const mine = logs.filter((l) => l.exerciseId === ex.id).sort((a, b) => a.setNo - b.setNo);
         const variant = variantFor(session, ex, mine);
         const rec = recs[ex.id] ?? { status: 'new' as const, weight: null, last: null };
-        const allDone = mine.length > 0 && mine.every((l) => l.completed);
+        const allDone = isDone(ex);
         return (
           <section
             key={ex.id}
-            class={`card ex${ex.id === activeId ? ' active' : ''}${allDone ? ' dim' : ''}`}
+            id={`ex-${ex.id}`}
+            class={`card ex st-${rec.status}${ex.id === activeId ? ' active' : ''}${allDone ? ' alldone' : ''}`}
           >
             <header class="ex-head">
               <div>
-                <h2>{ex.variants.length > 1 ? ex.name : variant}</h2>
+                <h2>{exLabel(ex, variant)}</h2>
                 {ex.isAccessory && <span class="tag">ท่าเสริม · {ex.name}</span>}
               </div>
               <Badge rec={rec} long />
@@ -237,7 +272,7 @@ export function Workout({ sessionId, settings, rest, onToggleAuto, onFinish, onC
                   <button
                     type="button"
                     key={v}
-                    class={`chip${v === variant ? ' on' : ''}`}
+                    class={`chip small${v === variant ? ' on' : ''}`}
                     onClick={() => changeVariant(ex, v)}
                   >
                     {v}
@@ -274,7 +309,7 @@ export function Workout({ sessionId, settings, rest, onToggleAuto, onFinish, onC
                     aria-pressed={l.completed}
                     onClick={() => toggle(l)}
                   >
-                    ✓
+                    <IconCheck size={22} />
                   </button>
                 </div>
                 <div class="set-inputs">
@@ -334,6 +369,8 @@ export function Workout({ sessionId, settings, rest, onToggleAuto, onFinish, onC
       <button type="button" class="link danger" onClick={cancel}>
         ยกเลิกการฝึกนี้
       </button>
+
+      {!panelVisible && <RestMini rest={rest} />}
     </div>
   );
 }

@@ -21,9 +21,16 @@ import {
   variantFor,
   type Recommendation,
 } from '../logic';
-import { Badge, NumInput } from '../ui';
+import { Badge, NumInput, stagger } from '../ui';
 
 Chart.register(CategoryScale, Legend, LinearScale, LineController, LineElement, PointElement, Tooltip);
+
+// Charts draw on a canvas, so they need the app's face and ink set explicitly.
+Chart.defaults.font.family = "'Noto Sans Thai', system-ui, sans-serif";
+Chart.defaults.font.size = 12;
+Chart.defaults.color = '#5c5970';
+const reduceMotion = () =>
+  typeof matchMedia === 'function' && matchMedia('(prefers-reduced-motion: reduce)').matches;
 
 const exLabel = (ex: Exercise) => (ex.variants.length > 1 ? ex.name : ex.variants[0]);
 const fmtDay = (ms: number) =>
@@ -132,6 +139,7 @@ function ProgressChart({ exerciseId, variant }: { exerciseId: string; variant: s
         options: {
           responsive: true,
           maintainAspectRatio: false,
+          animation: reduceMotion() ? false : { duration: 600, easing: 'easeOutQuart' },
           interaction: { mode: 'index', intersect: false },
           scales: {
             y: { position: 'left', title: { display: true, text: 'กก.' } },
@@ -287,6 +295,90 @@ function SessionDetail({ id, onBack, onChanged }: { id: number; onBack: () => vo
   );
 }
 
+/* ---------- week roadmap ---------- */
+
+function WeekView({
+  sessions,
+  counts,
+  onOpen,
+}: {
+  sessions: Session[];
+  counts: Record<number, number>;
+  onOpen: (id: number) => void;
+}) {
+  const [offset, setOffset] = useState(0); // weeks back/forward from this week
+  const now = new Date();
+  const monday = new Date(now);
+  monday.setDate(now.getDate() - ((now.getDay() + 6) % 7) + offset * 7);
+  const days = Array.from({ length: 7 }, (_, i) => {
+    const d = new Date(monday);
+    d.setDate(monday.getDate() + i);
+    return d;
+  });
+  const dates = days.map((d) => todayStr(d));
+  const today = todayStr(now);
+  const todayIdx = dates.indexOf(today);
+  const inWeek = sessions
+    .filter((s) => dates.includes(s.date))
+    .sort((a, b) => a.startedAt - b.startedAt);
+  const fmt = (d: Date) => d.toLocaleDateString('th-TH', { day: 'numeric', month: 'short' });
+
+  return (
+    <section class="card weekcard">
+      <div class="cal-head">
+        <button type="button" class="step nav" aria-label="สัปดาห์ก่อน" onClick={() => setOffset((o) => o - 1)}>
+          ‹
+        </button>
+        <h2>
+          {fmt(days[0])} – {fmt(days[6])}
+        </h2>
+        <button
+          type="button"
+          class="step nav"
+          aria-label="สัปดาห์ถัดไป"
+          disabled={offset >= 0}
+          onClick={() => setOffset((o) => Math.min(0, o + 1))}
+        >
+          ›
+        </button>
+      </div>
+      <div class="wkhead">
+        {['จ', 'อ', 'พ', 'พฤ', 'ศ', 'ส', 'อา'].map((d, i) => (
+          <span key={d} class={i === todayIdx ? 'now' : ''}>
+            {d}
+            <br />
+            {days[i].getDate()}
+          </span>
+        ))}
+      </div>
+      <div class="wkgrid">
+        {todayIdx >= 0 && (
+          <span class="today-line" style={{ left: `${((todayIdx + 0.5) / 7) * 100}%` }} aria-hidden="true" />
+        )}
+        {inWeek.length === 0 && <p class="muted center wkempty">ไม่มีการฝึกในสัปดาห์นี้</p>}
+        {inWeek.map((s, row) => {
+          const idx = dates.indexOf(s.date);
+          // a pill spans three day columns; Sat/Sun pills are pinned to the right edge so text fits
+          const col = Math.min(idx + 1, 5);
+          const cls = s.date === today ? 'tdy' : s.dayType === 'A' ? 'a' : 'b';
+          return (
+            <button
+              type="button"
+              key={s.id}
+              class={`wpill ${cls}`}
+              style={{ gridColumn: `${col} / span 3`, gridRow: row + 1, ...stagger(Math.min(row, 6)) }}
+              onClick={() => onOpen(s.id!)}
+            >
+              Day {s.dayType}
+              {counts[s.id!] ? ` · ${counts[s.id!]} ท่า` : ''}
+            </button>
+          );
+        })}
+      </div>
+    </section>
+  );
+}
+
 /* ---------- main screen ---------- */
 
 export function History() {
@@ -297,6 +389,8 @@ export function History() {
   const [detail, setDetail] = useState<number | null>(null);
   const [picked, setPicked] = useState<Session[]>([]);
   const [version, setVersion] = useState(0);
+  const [mode, setMode] = useState<'week' | 'month'>('week');
+  const [counts, setCounts] = useState<Record<number, number>>({});
 
   const load = useCallback(async () => {
     const s = (await db.sessions.where('status').equals('done').toArray()).sort(
@@ -304,6 +398,12 @@ export function History() {
     );
     const logs = await db.setLogs.filter((l) => l.completed).toArray();
     const used = new Set(logs.map((l) => l.exerciseId));
+    const perSession = new Map<number, Set<string>>();
+    for (const l of logs) {
+      if (!perSession.has(l.sessionId)) perSession.set(l.sessionId, new Set());
+      perSession.get(l.sessionId)!.add(l.exerciseId);
+    }
+    setCounts(Object.fromEntries([...perSession].map(([id, set]) => [id, set.size])));
     const e = (await db.exercises.toArray())
       .filter((x) => used.has(x.id))
       .sort((a, b) => a.order - b.order);
@@ -347,6 +447,14 @@ export function History() {
           <h1>ประวัติ</h1>
           <p class="muted">ฝึกไปแล้ว {sessions.length} ครั้ง</p>
         </div>
+        <div class="toggle" role="group" aria-label="มุมมอง">
+          <button type="button" class={mode === 'week' ? 'on' : ''} onClick={() => setMode('week')}>
+            สัปดาห์
+          </button>
+          <button type="button" class={mode === 'month' ? 'on' : ''} onClick={() => setMode('month')}>
+            เดือน
+          </button>
+        </div>
       </header>
 
       {sessions.length === 0 && (
@@ -356,7 +464,11 @@ export function History() {
         </section>
       )}
 
-      <Calendar sessions={sessions} onPick={pick} />
+      {mode === 'week' ? (
+        <WeekView sessions={sessions} counts={counts} onOpen={(id) => setDetail(id)} />
+      ) : (
+        <Calendar sessions={sessions} onPick={pick} />
+      )}
 
       {picked.length > 1 && (
         <section class="card">
